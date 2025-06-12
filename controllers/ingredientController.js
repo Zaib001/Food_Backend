@@ -12,6 +12,10 @@ exports.getIngredients = async (req, res) => {
   }
 };
 
+const calculatePricePerKg = (originalPrice, purchaseQuantity, yieldVal) => {
+  return (originalPrice / purchaseQuantity) / (yieldVal / 100);
+};
+
 // @desc    Create new ingredient
 // @route   POST /api/ingredients
 // @access  Private/Admin
@@ -19,28 +23,36 @@ exports.createIngredient = async (req, res) => {
   try {
     const {
       name,
+      purchaseUnit,
+      purchaseQuantity,
       originalUnit,
       originalPrice,
-      pricePerKg,
       kcal = 0,
       yield: yieldVal = 100,
       category = 'other',
-      warehouse = ''
+      warehouse = '',
+      standardWeight = 0,
     } = req.body;
 
-    if (!name || !originalUnit || !originalPrice || !pricePerKg) {
+    // Validate required fields
+    if (!name || !purchaseUnit || !purchaseQuantity || !originalUnit || !originalPrice) {
       return res.status(400).json({ message: 'Required fields missing' });
     }
 
+    const pricePerKg = calculatePricePerKg(originalPrice, purchaseQuantity, yieldVal);
+
     const newIngredient = await Ingredient.create({
-      name,
-      originalUnit,
+      name: name.trim(),
+      purchaseUnit: purchaseUnit.trim(),
+      purchaseQuantity,
+      originalUnit: originalUnit.trim(),
       originalPrice,
       pricePerKg,
       kcal,
       yield: yieldVal,
-      category,
-      warehouse,
+      category: category?.trim() || 'other',
+      warehouse: warehouse?.trim() || '',
+      standardWeight,
     });
 
     res.status(201).json(newIngredient);
@@ -49,24 +61,60 @@ exports.createIngredient = async (req, res) => {
   }
 };
 
+
+
 // @desc    Update ingredient
 // @route   PUT /api/ingredients/:id
 // @access  Private/Admin
 exports.updateIngredient = async (req, res) => {
   try {
-    const ingredient = await Ingredient.findByIdAndUpdate(
+    const {
+      name,
+      purchaseUnit,
+      purchaseQuantity,
+      originalUnit,
+      originalPrice,
+      yield: yieldVal = 100,
+      kcal,
+      category,
+      warehouse,
+      standardWeight
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !purchaseUnit || !purchaseQuantity || !originalUnit || !originalPrice) {
+      return res.status(400).json({ message: 'Required fields missing' });
+    }
+
+    const pricePerKg = calculatePricePerKg(originalPrice, purchaseQuantity, yieldVal);
+
+    const updated = await Ingredient.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      {
+        name: name.trim(),
+        purchaseUnit: purchaseUnit.trim(),
+        purchaseQuantity,
+        originalUnit: originalUnit.trim(),
+        originalPrice,
+        pricePerKg,
+        kcal,
+        yield: yieldVal,
+        category: category?.trim() || 'other',
+        warehouse: warehouse?.trim() || '',
+        standardWeight,
+      },
       { new: true, runValidators: true }
     );
 
-    if (!ingredient) return res.status(404).json({ message: 'Ingredient not found' });
+    if (!updated) return res.status(404).json({ message: 'Ingredient not found' });
 
-    res.status(200).json(ingredient);
+    res.status(200).json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update ingredient', error: err.message });
   }
 };
+
+
 
 // @desc    Delete ingredient
 // @route   DELETE /api/ingredients/:id
