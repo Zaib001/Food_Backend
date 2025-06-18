@@ -12,8 +12,20 @@ exports.getIngredients = async (req, res) => {
   }
 };
 
-const calculatePricePerKg = (originalPrice, purchaseQuantity, yieldVal) => {
-  return (originalPrice / purchaseQuantity) / (yieldVal / 100);
+const unitConversionToKg = {
+  kg: 1,
+  g: 0.001,
+  lb: 0.453592,
+  oz: 0.0283495,
+  lt: 1,
+  ml: 0.001,
+  jug: 1.89,
+  pcs: 1,
+};
+
+const calculatePricePerKg = (originalPrice, purchaseQuantity, purchaseUnit, yieldVal) => {
+  const convertedQtyInKg = purchaseQuantity * (unitConversionToKg[purchaseUnit] || 1);
+  return (originalPrice / convertedQtyInKg) / (yieldVal / 100);
 };
 
 // @desc    Create new ingredient
@@ -39,7 +51,7 @@ exports.createIngredient = async (req, res) => {
       return res.status(400).json({ message: 'Required fields missing' });
     }
 
-    const pricePerKg = calculatePricePerKg(originalPrice, purchaseQuantity, yieldVal);
+    const pricePerKg = calculatePricePerKg(originalPrice, purchaseQuantity, purchaseUnit, yieldVal);
 
     const newIngredient = await Ingredient.create({
       name: name.trim(),
@@ -86,7 +98,7 @@ exports.updateIngredient = async (req, res) => {
       return res.status(400).json({ message: 'Required fields missing' });
     }
 
-    const pricePerKg = calculatePricePerKg(originalPrice, purchaseQuantity, yieldVal);
+    const pricePerKg = calculatePricePerKg(originalPrice, purchaseQuantity, purchaseUnit, yieldVal);
 
     const updated = await Ingredient.findByIdAndUpdate(
       req.params.id,

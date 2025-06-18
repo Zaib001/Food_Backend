@@ -1,4 +1,3 @@
-// models/Recipe.js
 const mongoose = require('mongoose');
 
 const recipeSchema = new mongoose.Schema({
@@ -7,6 +6,8 @@ const recipeSchema = new mongoose.Schema({
   yieldWeight: { type: Number, required: true },
   type: { type: String },
   category: { type: String },
+  procedure: { type: String },
+  imageUrl: { type: String }, 
   ingredients: [
     {
       ingredientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ingredient' },

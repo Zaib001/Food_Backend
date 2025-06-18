@@ -7,10 +7,11 @@ const {
   deleteRecipe
 } = require('../controllers/recipeController');
 const { protect } = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 router.get('/', protect, getAllRecipes);
-router.post('/', protect, createRecipe);
-router.put('/:id', protect, updateRecipe);
+router.post('/',upload.single('image'), protect, createRecipe);
+router.put('/:id',upload.single('image'), protect, updateRecipe);
 router.delete('/:id', protect, deleteRecipe);
 
 module.exports = router;

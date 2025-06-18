@@ -18,31 +18,52 @@ exports.getAllRecipes = async (req, res) => {
 // @access  Private
 exports.createRecipe = async (req, res) => {
   try {
-    const { name, portions, yieldWeight, type, category, ingredients } = req.body;
+    const { name, portions, yieldWeight, type, category, ingredients, procedure } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!name || !portions || !yieldWeight || !Array.isArray(ingredients)) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    const recipe = await Recipe.create({ name, portions, yieldWeight, type, category, ingredients });
+    const recipe = await Recipe.create({
+      name,
+      portions,
+      yieldWeight,
+      type,
+      category,
+      ingredients,
+      procedure,
+      imageUrl
+    });
+
     res.status(201).json(recipe);
   } catch (err) {
     res.status(500).json({ message: 'Failed to create recipe', error: err.message });
   }
 };
 
+
+
 // @desc    Update recipe
 // @route   PUT /api/recipes/:id
 // @access  Private
 exports.updateRecipe = async (req, res) => {
   try {
-    const updated = await Recipe.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+    if (req.file) {
+      updateData.imageUrl = `/uploads/${req.file.filename}`;
+    }
+
+    const updated = await Recipe.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!updated) return res.status(404).json({ message: 'Recipe not found' });
+
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update recipe', error: err.message });
   }
 };
+
+
 
 // @desc    Delete recipe
 // @route   DELETE /api/recipes/:id
