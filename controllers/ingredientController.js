@@ -44,6 +44,7 @@ exports.createIngredient = async (req, res) => {
       category = 'other',
       warehouse = '',
       standardWeight = 0,
+      supplier = '',
     } = req.body;
 
     // Validate required fields
@@ -65,8 +66,8 @@ exports.createIngredient = async (req, res) => {
       category: category?.trim() || 'other',
       warehouse: warehouse?.trim() || '',
       standardWeight,
+      supplier: supplier?.trim() || '',
     });
-
     res.status(201).json(newIngredient);
   } catch (err) {
     res.status(500).json({ message: 'Failed to create ingredient', error: err.message });
@@ -90,7 +91,8 @@ exports.updateIngredient = async (req, res) => {
       kcal,
       category,
       warehouse,
-      standardWeight
+      standardWeight,
+      supplier = '',
     } = req.body;
 
     // Validate required fields
@@ -114,6 +116,7 @@ exports.updateIngredient = async (req, res) => {
         category: category?.trim() || 'other',
         warehouse: warehouse?.trim() || '',
         standardWeight,
+        supplier: supplier?.trim() || '',
       },
       { new: true, runValidators: true }
     );
