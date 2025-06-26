@@ -17,13 +17,20 @@ exports.getAllRecipes = async (req, res) => {
 // @route   POST /api/recipes
 // @access  Private
 exports.createRecipe = async (req, res) => {
+  const { name, portions, yieldWeight, type, category, procedure } = req.body;
+  let ingredients = req.body.ingredients;
   try {
-    const { name, portions, yieldWeight, type, category, ingredients, procedure } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    // If ingredients is a string (due to FormData), parse it
+    if (typeof ingredients === 'string') {
+      ingredients = JSON.parse(ingredients);
+    }
 
-    if (!name || !portions || !yieldWeight || !Array.isArray(ingredients)) {
+    if (!name || !portions || !yieldWeight || !Array.isArray(ingredients) || ingredients.length === 0) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
+
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    console.log('Uploaded file:', req.file);
 
     const recipe = await Recipe.create({
       name,

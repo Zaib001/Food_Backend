@@ -10,8 +10,8 @@ const { protect } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
 
 router.get('/', protect, getAllRecipes);
-router.post('/',upload.single('image'), protect, createRecipe);
-router.put('/:id',upload.single('image'), protect, updateRecipe);
+router.post('/', protect, upload.single('image'), createRecipe);
+router.put('/:id', protect, upload.single('image'), updateRecipe);
 router.delete('/:id', protect, deleteRecipe);
 
 module.exports = router;
