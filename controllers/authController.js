@@ -81,3 +81,54 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch profile', error: err.message });
   }
 };
+
+// @desc    Get all users (Admin only)
+// @route   GET /api/auth/users
+// @access  Private/Admin
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select('-password');
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch users', error: err.message });
+  }
+};
+
+// @desc    Update a user (Admin only)
+// @route   PUT /api/auth/users/:id
+// @access  Private/Admin
+exports.updateUser = async (req, res) => {
+  try {
+    const { name, email, role } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user)
+      return res.status(404).json({ message: 'User not found' });
+
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.role = role || user.role;
+
+    const updatedUser = await user.save();
+    res.status(200).json({
+      message: 'User updated successfully',
+      user: { id: updatedUser._id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role }
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update user', error: err.message });
+  }
+};
+
+// @desc    Delete a user (Admin only)
+// @route   DELETE /api/auth/users/:id
+// @access  Private/Admin
+exports.deleteUser = async (req, res) => {
+  try {
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    if (!deletedUser) return res.status(404).json({ message: 'User not found' });
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete user', error: err.message });
+  }
+};
