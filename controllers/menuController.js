@@ -14,14 +14,16 @@ exports.getAllMenus = async (req, res) => {
   }
 };
 
-// @desc    Create a new menu
+// @desc    Create a new menu (supports breakfast/lunch/dinner/snack/extra)
 // @route   POST /api/menus
 // @access  Private/Admin
 exports.createMenu = async (req, res) => {
   try {
-    const { date, base, mealType, recipeIds } = req.body;
+    const { menuName, date, base, mealType, recipeIds } = req.body;
 
-  
+    if (!menuName || !date || !base || !mealType || !Array.isArray(recipeIds) || recipeIds.length === 0) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
 
     const recipes = await Recipe.find({ _id: { $in: recipeIds } });
 
@@ -32,10 +34,11 @@ exports.createMenu = async (req, res) => {
     }
 
     const menu = await Menu.create({
+      menuName,
       date,
       base,
       mealType,
-      recipeIds: recipes.map(r => r._id)  
+      recipeIds: recipes.map(r => r._id)
     });
 
     res.status(201).json(menu);
@@ -44,7 +47,6 @@ exports.createMenu = async (req, res) => {
   }
 };
 
-
 // @desc    Delete a menu
 // @route   DELETE /api/menus/:id
 // @access  Private/Admin
@@ -52,7 +54,6 @@ exports.deleteMenu = async (req, res) => {
   try {
     const menu = await Menu.findByIdAndDelete(req.params.id);
     if (!menu) return res.status(404).json({ message: 'Menu not found' });
-
     res.status(200).json({ message: 'Menu deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Failed to delete menu', error: err.message });
@@ -62,12 +63,11 @@ exports.deleteMenu = async (req, res) => {
 // @desc    Generate requisitions from menus (aggregated ingredients)
 // @route   GET /api/menus/requisitions
 // @access  Private
-// @desc    Generate requisitions from menus
 exports.generateRequisitions = async (req, res) => {
   try {
     const peopleCount = parseInt(req.query.peopleCount) || 100;
     const portionFactor = peopleCount / 10;
-    
+
     const menus = await Menu.find().populate('recipeIds');
     const ingredientMap = {};
 
@@ -105,5 +105,3 @@ exports.generateRequisitions = async (req, res) => {
     res.status(500).json({ message: 'Failed to generate requisitions', error: err.message });
   }
 };
-
-

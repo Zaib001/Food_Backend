@@ -9,8 +9,8 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 
 router.get('/', protect, getAllMenus);
-router.post('/', protect,  createMenu);
-router.delete('/:id', protect,  deleteMenu);
+router.post('/', protect, createMenu);
+router.delete('/:id', protect, deleteMenu);
 router.get('/requisitions', protect, generateRequisitions);
 
 module.exports = router;
