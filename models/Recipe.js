@@ -14,7 +14,9 @@ const recipeSchema = new mongoose.Schema({
     required: true
   },
   isLocked: { type: Boolean, default: false },
-  basePortions: { type: Number, default: 10 },
+  lockedAt: { type: Date },
+  lockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  lockNote: { type: String }, basePortions: { type: Number, default: 10 },
   ingredients: [
     {
       ingredientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ingredient' },

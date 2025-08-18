@@ -1,6 +1,5 @@
 const Planning = require('../models/Planning');
 const Menu = require('../models/Menu');
-const Recipe = require('../models/Recipe');
 const Ingredient = require('../models/Ingredient');
 const Requisition = require('../models/Requisition');
 
@@ -17,9 +16,8 @@ async function generateRequisitionsForPlan(planDoc) {
   await Requisition.deleteMany({ plan: planDoc._id });
 
   const mealBlocks = ['breakfast', 'lunch', 'snack', 'dinner', 'extra'];
+  const agg = {}; // ingredientId -> { qty, name, unit, ingredientId }
 
-  // aggregate by ingredientId
-  const agg = {}; // key: ingredientId -> { qty, name, unit }
   for (const block of mealBlocks) {
     const ref = planDoc[block];
     if (!ref?.menu || !ref?.qty || ref.qty <= 0) continue;
@@ -56,7 +54,6 @@ async function generateRequisitionsForPlan(planDoc) {
     }
   }
 
-  // build docs
   const docs = Object.values(agg).map(row => ({
     date: planDoc.date,
     base: planDoc.base,
@@ -73,11 +70,11 @@ async function generateRequisitionsForPlan(planDoc) {
   if (docs.length) {
     await Requisition.insertMany(docs);
   }
-
   return docs.length;
 }
 
 // @route GET /api/planning
+// Roles: planner, base-supervisor, admin (read)
 exports.getAllPlans = async (req, res) => {
   try {
     const plans = await Planning.find()
@@ -93,6 +90,7 @@ exports.getAllPlans = async (req, res) => {
 };
 
 // @route POST /api/planning
+// Roles: planner, admin
 exports.createPlan = async (req, res) => {
   try {
     const { date, base, breakfast, lunch, snack, dinner, extra, notes } = req.body;
@@ -128,6 +126,7 @@ exports.createPlan = async (req, res) => {
 };
 
 // @route PUT /api/planning/:id
+// Roles: planner, admin
 exports.updatePlan = async (req, res) => {
   try {
     const { date, base, breakfast, lunch, snack, dinner, extra, notes } = req.body;
@@ -163,6 +162,7 @@ exports.updatePlan = async (req, res) => {
 };
 
 // @route DELETE /api/planning/:id
+// Roles: admin
 exports.deletePlan = async (req, res) => {
   try {
     const deleted = await Planning.findByIdAndDelete(req.params.id);

@@ -83,34 +83,52 @@ exports.updateRecipe = async (req, res) => {
     const recipe = await Recipe.findById(req.params.id);
     if (!recipe) return res.status(404).json({ message: 'Recipe not found' });
 
-    if (recipe.isLocked) {
-      return res.status(400).json({ message: 'Cannot update a locked recipe' });
+    const userRole = req.user?.role || 'user';
+    console.log(userRole)
+    const isAdmin = userRole === 'admin';
+
+    // If recipe is locked and user is NOT admin, block any update
+    if (recipe.isLocked && !isAdmin) {
+      return res.status(403).json({ message: 'Cannot update a locked recipe' });
     }
 
-    const { name, portions, type, procedure, ingredients, clientCount, isLocked } = req.body;
+    // Parse payload
+    const {
+      name,
+      portions,
+      type,
+      procedure,
+      ingredients,
+      clientCount,
+      isLocked,
+    } = req.body;
+
+    // Parse/normalize ingredients
     let parsedIngredients = ingredients;
-
-    if (typeof ingredients === 'string') parsedIngredients = JSON.parse(ingredients);
-
-    // If no ingredients passed, keep existing
+    if (typeof parsedIngredients === 'string') {
+      try { parsedIngredients = JSON.parse(parsedIngredients); } catch { parsedIngredients = null; }
+    }
     if (!Array.isArray(parsedIngredients)) parsedIngredients = recipe.ingredients;
 
     let scaledPortions = Number(portions ?? recipe.portions);
-    let scaledIngredients = parsedIngredients.map(ing => ({
-      ingredientId: ing.ingredientId || (ing.ingredientId?._id),
+    let scaledIngredients = parsedIngredients.map((ing) => ({
+      ingredientId: ing.ingredientId || ing.ingredientId?._id,
       quantity: Number(ing.quantity),
-      baseQuantity: Number(ing.baseQuantity ?? ing.quantity)
+      baseQuantity: Number(ing.baseQuantity ?? ing.quantity),
     }));
     let scaledYieldWeight = scaledIngredients.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
 
+    // Optional: scale via clientCount
     if (clientCount && !isNaN(clientCount)) {
-      const factor = Number(clientCount) / Number(recipe.basePortions || recipe.portions || 1);
+      const base = Number(recipe.basePortions || recipe.portions || 1);
+      const factor = base > 0 ? Number(clientCount) / base : 1;
       scaledPortions = Number(clientCount);
-      scaledIngredients = scaledIngredients.map(ing => ({
+      scaledIngredients = scaledIngredients.map((ing) => ({
         ...ing,
-        quantity: Number(((ing.baseQuantity || ing.quantity) * factor).toFixed(2))
+        quantity: Number(((ing.baseQuantity || ing.quantity) * factor).toFixed(2)),
       }));
-      scaledYieldWeight = Number((Number(recipe.yieldWeight || scaledYieldWeight) * factor).toFixed(2));
+      const baseYield = Number(recipe.yieldWeight || scaledYieldWeight || 0);
+      scaledYieldWeight = Number((baseYield * factor).toFixed(2));
     }
 
     const updateData = {
@@ -122,26 +140,28 @@ exports.updateRecipe = async (req, res) => {
       ingredients: scaledIngredients,
     };
 
-    // allow locking on update
-    if (typeof isLocked !== 'undefined') {
-      updateData.isLocked = (isLocked === 'true' || isLocked === true);
-    }
-
+    // Image (if uploaded)
     if (req.file) {
       updateData.imageUrl = `/uploads/${req.file.filename}`;
     }
 
-    const updated = await Recipe.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    ).populate('ingredients.ingredientId');
+    // Lock/unlock logic:
+    // - Admin can set isLocked true/false
+    // - Non-admin: ignore isLocked in payload
+    if (typeof isLocked !== 'undefined' && isAdmin) {
+      updateData.isLocked = (isLocked === 'true' || isLocked === true);
+    }
+
+    const updated = await Recipe.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+    }).populate('ingredients.ingredientId');
 
     res.json(updated);
   } catch (err) {
     res.status(500).json({ message: 'Failed to update recipe', error: err.message });
   }
 };
+
 
 // @desc    Delete recipe
 // @route   DELETE /api/recipes/:id
@@ -199,5 +219,35 @@ exports.getRecipesByType = async (req, res) => {
     res.json(recipes);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch menu recipes', error: err.message });
+  }
+};
+exports.setRecipeLock = async (req, res) => {
+  try {
+    const { isLocked, note } = req.body;
+    if (typeof isLocked === 'undefined') {
+      return res.status(400).json({ message: 'isLocked is required' });
+    }
+
+    const patch = { isLocked: !!isLocked };
+    if (isLocked) {
+      patch.lockedAt = new Date();
+      patch.lockedBy = req.user?._id || null;
+      patch.lockNote = note || '';
+    } else {
+      patch.lockedAt = null;
+      patch.lockedBy = null;
+      patch.lockNote = '';
+    }
+
+    const updated = await Recipe.findByIdAndUpdate(
+      req.params.id,
+      patch,
+      { new: true }
+    ).populate('ingredients.ingredientId');
+
+    if (!updated) return res.status(404).json({ message: 'Recipe not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to set recipe lock', error: err.message });
   }
 };

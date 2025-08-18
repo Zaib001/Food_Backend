@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 const mealRefSchema = new mongoose.Schema({
-  menu: { type: mongoose.Schema.Types.ObjectId, ref: 'Menu' }, // selected menu for that block
-  qty: { type: Number, default: 0 }, // how many to produce for that block
+  menu: { type: mongoose.Schema.Types.ObjectId, ref: 'Menu' }, // selected menu for the block
+  qty: { type: Number, default: 0 }, // planned quantity for the block
 }, { _id: false });
 
 const planningSchema = new mongoose.Schema({

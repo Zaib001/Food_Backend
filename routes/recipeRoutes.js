@@ -7,9 +7,9 @@ const {
   updateRecipe,
   deleteRecipe,
   scaleRecipe,
-  getRecipesByType
+  getRecipesByType,setRecipeLock
 } = require('../controllers/recipeController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
 
 router.route('/')
@@ -27,4 +27,5 @@ router.route('/:id/scale')
 router.route('/menu/:type')
   .get(protect, getRecipesByType);
 
+router.patch('/:id/lock', authorize('admin'), setRecipeLock);
 module.exports = router;
