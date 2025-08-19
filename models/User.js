@@ -1,3 +1,4 @@
+// models/User.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema(
@@ -7,9 +8,10 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true, minlength: 6 },
     role: {
       type: String,
-      enum: ['admin', 'planner', 'base', 'user'], // <— added planner, base
+      enum: ['admin', 'planner', 'base', 'user'], 
       default: 'user',
     },
+    company: { type: String, trim: true, default: '' }, 
   },
   { timestamps: true }
 );

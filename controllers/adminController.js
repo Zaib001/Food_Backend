@@ -13,6 +13,7 @@ try { Production = require('../models/Production'); } catch (_) { Production = n
 exports.getAllUsers = async (_req, res) => {
   try {
     const users = await User.find().select('-password');
+    console.log(users);
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch users', error: err.message });
@@ -75,22 +76,33 @@ exports.adminListUsers = async (req, res) => {
   }
 };
 
+// controllers/admin.js (where exports.adminCreateUser lives)
 exports.adminCreateUser = async (req, res) => {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, password, role = 'user', company = '' } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'name, email, password are required' });
     }
+
     const exists = await User.findOne({ email });
     if (exists) return res.status(409).json({ message: 'Email already registered' });
 
     const hashed = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, email, password: hashed, role });
-    res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
+    const user = await User.create({ name, email, password: hashed, role, company });
+
+    res.status(201).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      company: user.company,
+    });
   } catch (err) {
     res.status(500).json({ message: 'Failed to create user', error: err.message });
   }
 };
+
+
 
 exports.adminUpdateUser = async (req, res) => {
   try {
