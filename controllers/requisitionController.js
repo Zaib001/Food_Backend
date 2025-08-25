@@ -218,3 +218,104 @@ exports.bulkApprove = async (req, res) => {
   }
 };
 
+// controllers/requisitionController.js
+
+// PUT /api/requisitions/:id/complete
+// controllers/requisitionController.js - Simple test version
+exports.completeRequisition = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { actualQuantities, completedBy } = req.body;
+    
+    console.log('Completion request:', { id, actualQuantities, completedBy });
+    
+    const doc = await Requisition.findById(id);
+    if (!doc) return res.status(404).json({ message: 'Requisition not found' });
+    
+    // Update items with actual quantities
+    if (Array.isArray(doc.items) && actualQuantities) {
+      doc.items.forEach((item) => {
+        const itemKey = item._id || item.ingredientId;
+        if (actualQuantities[itemKey] !== undefined) {
+          item.actualQuantity = actualQuantities[itemKey];
+          item.status = 'completed';
+        }
+      });
+    }
+
+    // Update header status
+    doc.status = 'completed';
+    doc.completedAt = new Date();
+    doc.completedBy = completedBy;
+
+    await doc.save();
+    
+    console.log('Requisition completed successfully:', doc._id);
+    return res.json({ message: 'Requisition completed successfully', requisition: doc });
+  } catch (err) {
+    console.error('Completion error:', err);
+    return res.status(500).json({ message: 'Failed to complete requisition', error: err.message });
+  }
+};
+
+// PUT /api/requisitions/:id/item/:itemId/complete
+// controllers/requisitionController.js - Enhanced completion function
+exports.completeRequisition = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { actualQuantities, completedBy, notes } = req.body;
+    
+    const doc = await Requisition.findById(id);
+    if (!doc) return res.status(404).json({ message: 'Requisition not found' });
+    
+    // Check if already completed
+    if (doc.status === 'completed') {
+      return res.status(400).json({ message: 'Requisition is already completed' });
+    }
+    
+    // Update items with actual quantities
+    if (Array.isArray(doc.items) && actualQuantities) {
+      let allItemsCompleted = true;
+      
+      doc.items.forEach((item) => {
+        const itemId = item._id.toString();
+        if (actualQuantities[itemId] !== undefined && actualQuantities[itemId] !== null) {
+          item.actualQuantity = actualQuantities[itemId];
+          item.status = 'completed';
+        } else {
+          // If any item doesn't have actual quantity, mark as not fully completed
+          allItemsCompleted = false;
+        }
+      });
+      
+      // Only mark header as completed if all items are completed
+      if (allItemsCompleted) {
+        doc.status = 'completed';
+        doc.completedAt = new Date();
+        doc.completedBy = completedBy;
+        doc.notes = notes;
+      } else {
+        // Partial completion - keep header status as approved
+        doc.status = 'approved';
+      }
+    } else {
+      // For line-level requisitions or missing actualQuantities
+      doc.status = 'completed';
+      doc.completedAt = new Date();
+      doc.completedBy = completedBy;
+      doc.notes = notes;
+    }
+
+    await doc.save();
+    
+    return res.json({ 
+      message: 'Requisition completed successfully', 
+      requisition: doc 
+    });
+  } catch (err) {
+    return res.status(500).json({ 
+      message: 'Failed to complete requisition', 
+      error: err.message 
+    });
+  }
+};
